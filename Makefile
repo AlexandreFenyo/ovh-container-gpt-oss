@@ -26,3 +26,4 @@ run-on-ovh:
 push:
 	echo RUN '"docker login -u fenyoa"' and enter password
 	docker push fenyoa/ft_gpt_oss_20b_ovh_faq
+

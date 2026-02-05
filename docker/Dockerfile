@@ -4,7 +4,7 @@ ENV TERM=vt100
 ENV LANG=C.UTF-8
 WORKDIR /workspace
 ENV HOME=/workspace
-RUN yes | unminimize
+# RUN yes | unminimize
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends software-properties-common ca-certificates libxml2 build-essential curl wget iproute2 net-tools less zsh vim inetutils-telnet inetutils-ping jq htop nvidia-utils-590-server unzip python3.12-venv pip
 COPY files/awscli-exe-linux-x86_64.zip .
 RUN unzip awscli-exe-linux-x86_64.zip

@@ -1,6 +1,9 @@
 
 all: docker/files/ft.py.enc docker/files/aws/credentials.enc
 
+decrypt:
+	openssl enc -d -aes-256-cbc -out docker/files/ft.py -in docker/files/ft.py.enc -K $$mykey -iv $$iv
+
 docker/files/ft.py.enc: docker/files/ft.py
 	openssl enc -aes-256-cbc -in docker/files/ft.py -out docker/files/ft.py.enc -K $$mykey -iv $$iv
 

@@ -1,0 +1,10 @@
+[default]
+region = gra
+endpoint_url = https://s3.gra.io.cloud.ovh.net/
+services = ovh-gra
+[services ovh-gra]
+s3 =
+  endpoint_url = https://s3.gra.io.cloud.ovh.net/
+  signature_version = s3v4
+s3api =
+endpoint_url = https://s3.gra.io.cloud.ovh.net/

@@ -1,0 +1,66 @@
+
+import os
+import wandb
+from huggingface_hub import login
+from datasets import load_dataset
+from transformers import AutoTokenizer
+import torch
+from transformers import AutoModelForCausalLM, Mxfp4Config
+from peft import LoraConfig, get_peft_model
+from trl import SFTConfig
+from trl import SFTTrainer
+
+os.environ['WANDB_NOTEBOOK_NAME'] = 'gpt-oss-20b-FAQ-MES'
+wandb.login(key=os.environ['wandbkey'])
+wandb.init(project="fenyo-FAQ-MES", entity="alexandre-fenyo-fenyonet", name="gpt-oss-20b-FAQ-MES")
+login(token=os.environ['hftoken'])
+
+dataset = load_dataset("fenyo/FAQ-MES", split="train")
+dataset = dataset.remove_columns([c for c in dataset.column_names if c != "messages"])
+tokenizer = AutoTokenizer.from_pretrained("gpt-oss-20b")
+quantization_config = Mxfp4Config(dequantize=True)
+model_kwargs = dict(
+    attn_implementation="eager",
+    torch_dtype=torch.bfloat16,
+    quantization_config=quantization_config,
+    use_cache=False,
+    # device_map="auto",
+)
+model = AutoModelForCausalLM.from_pretrained("gpt-oss-20b", **model_kwargs)
+
+peft_config = LoraConfig(
+    r=32,
+    lora_alpha=64,
+    lora_dropout=0.05,
+    bias="all",
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+)
+peft_model = get_peft_model(model, peft_config)
+peft_model.print_trainable_parameters()
+training_args = SFTConfig(
+    learning_rate=1e-4,
+    gradient_checkpointing=True,
+    num_train_epochs=1,
+    logging_steps=1,
+#    per_device_train_batch_size=2,
+    per_device_train_batch_size=8,
+    gradient_accumulation_steps=8,
+    max_length=2048,
+    warmup_ratio=0.05,
+#    lr_scheduler_type="cosine",
+    lr_scheduler_type="constant",
+#    lr_scheduler_kwargs={"min_lr_rate": 0.1},
+    output_dir="gpt-oss-20b-lora",
+    push_to_hub=True,
+    report_to="wandb",
+)
+trainer = SFTTrainer(
+    model=peft_model,
+    args=training_args,
+    train_dataset=dataset,
+    processing_class=tokenizer,
+)
+
+trainer.train()
+trainer.save_model(training_args.output_dir)
+# trainer.push_to_hub(dataset_name="fenyo/FAQ-MES")

@@ -18,16 +18,16 @@ echo RUNNING ft.py
 echo DONE merge.py
 echo
 
-export QUESTION="Quelle est la différence entre l'app mobile et l'accès via le site web ?"
+export QUESTION="Pouvez‑vous lister les options exclusives à la version mobile ?"
 echo RUNNING query.py
-/workspace/venv/bin/python3 query.py --user-prompt "Quelle est la différence entre l'app mobile et l'accès via le site web ?"
+/workspace/venv/bin/python3 query.py --user-prompt "$QUESTION"
 echo DONE query.py
 echo
 
 for i in gpt-oss-20b-lora/checkpoint*
 do
 echo RUNNING query.py on checkpoint $i
-/workspace/venv/bin/python query-checkpoint.py --model-name $i --user-prompt "Quelle est la différence entre l'app mobile et l'accès via le site web ?"
+/workspace/venv/bin/python query.py --model-name $i --user-prompt "$QUESTION"
 echo DONE query.py on checkpoint $i
 echo
 done

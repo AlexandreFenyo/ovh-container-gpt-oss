@@ -13,12 +13,19 @@ from trl import SFTTrainer
 os.environ['WANDB_NOTEBOOK_NAME'] = 'gpt-oss-20b-FAQ-MES'
 wandb.login(key=os.environ['wandbkey'])
 wandb.init(project="fenyo-FAQ-MES", entity="alexandre-fenyo-fenyonet", name="gpt-oss-20b-FAQ-MES")
-login(token=os.environ['hftoken'])
+login(token=os.environ['hfkey'])
 
-dataset = load_dataset("fenyo/FAQ-MES", split="train")
-dataset = dataset.remove_columns([c for c in dataset.column_names if c != "messages"])
+# Chargement des jeux de données
+train_dataset = load_dataset("fenyo/FAQ-MES", split="train")
+# Conserve uniquement la colonne "messages" (ou adapte selon ton schéma)
+train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_names if c != "messages"])
+
+eval_dataset = load_dataset("fenyo/FAQ-MES", split="validation")
+eval_dataset = eval_dataset.remove_columns([c for c in eval_dataset.column_names if c != "messages"])
+
 tokenizer = AutoTokenizer.from_pretrained("gpt-oss-20b")
 quantization_config = Mxfp4Config(dequantize=True)
+
 model_kwargs = dict(
     attn_implementation="eager",
     torch_dtype=torch.bfloat16,
@@ -37,30 +44,34 @@ peft_config = LoraConfig(
 )
 peft_model = get_peft_model(model, peft_config)
 peft_model.print_trainable_parameters()
+
 training_args = SFTConfig(
     learning_rate=1e-4,
     gradient_checkpointing=True,
-    num_train_epochs=1,
+    num_train_epochs=5,
     logging_steps=1,
-#    per_device_train_batch_size=2,
     per_device_train_batch_size=8,
     gradient_accumulation_steps=8,
     max_length=2048,
     warmup_ratio=0.05,
-#    lr_scheduler_type="cosine",
-    lr_scheduler_type="constant",
-#    lr_scheduler_kwargs={"min_lr_rate": 0.1},
+    lr_scheduler_type="cosine",
     output_dir="gpt-oss-20b-lora",
     push_to_hub=True,
     report_to="wandb",
+    # Activation de l’évaluation
+    eval_strategy="epoch",   # 'steps' ou 'epoch'
+#    eval_steps=1000,           # fréquence d’évaluation (toutes les 1000 steps)
 )
+
 trainer = SFTTrainer(
     model=peft_model,
     args=training_args,
-    train_dataset=dataset,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,      # NEW: dataset d’évaluation
     processing_class=tokenizer,
 )
 
 trainer.train()
 trainer.save_model(training_args.output_dir)
 # trainer.push_to_hub(dataset_name="fenyo/FAQ-MES")
+

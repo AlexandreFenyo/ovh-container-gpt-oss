@@ -15,7 +15,7 @@ shell:
 
 run-on-ovh:
 	echo RUN '"ovhai login" (cf. 1Password)'
-	echo ovhai job run --name faq --flavor h100-1-gpu --gpu 1 --ssh-public-keys $$sshkey --unsecure-http fenyoa/ft_gpt_oss_20b_ovh_faq -e mykey=$$mykey -e iv=$$iv -e wandbkey=$$wandbkey -e hfkey=$$hfkey
+	@echo ovhai job run --name faq --flavor h100-1-gpu --gpu 1 --ssh-public-keys \"$$sshkey\" --unsecure-http fenyoa/ft_gpt_oss_20b_ovh_faq -e mykey=$$mykey -e iv=$$iv -e wandbkey=$$wandbkey -e hfkey=$$hfkey
 
 push:
 	echo RUN '"docker login -u fenyoa"' and enter password

@@ -5,6 +5,10 @@
 # iv : IV utilisé avec le chiffrement AES-256
 # wandbkey : clé d'API wandb
 # hfkey : clé d'API Hugging Face
+# dataset_name : ex. : fenyo/FAQ-MES
+# wandb_project : ex. : fenyo-FAQ-MES
+# wandb_run : ex. : gpt-oss-20b-FAQ-MES
+
 
 openssl enc -d -aes-256-cbc -out /workspace/.aws/credentials -in /workspace/.aws/credentials.enc -K $mykey -iv $iv
 git clone https://github.com/AlexandreFenyo/ovh-container-gpt-oss

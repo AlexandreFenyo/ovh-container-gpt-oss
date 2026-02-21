@@ -52,7 +52,7 @@ peft_model.print_trainable_parameters()
 training_args = SFTConfig(
     learning_rate=1e-4,
     gradient_checkpointing=True,
-    num_train_epochs=5,
+    num_train_epochs=20,
     logging_steps=1,
     per_device_train_batch_size=8,
     gradient_accumulation_steps=8,

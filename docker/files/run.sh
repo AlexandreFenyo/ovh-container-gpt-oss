@@ -5,10 +5,6 @@
 # iv : IV utilisé avec le chiffrement AES-256
 # wandbkey : clé d'API wandb
 # hfkey : clé d'API Hugging Face
-# dataset_name : ex. : fenyo/FAQ-MES
-# wandb_project : ex. : fenyo-FAQ-MES
-# wandb_run : ex. : gpt-oss-20b-FAQ-MES
-
 
 openssl enc -d -aes-256-cbc -out /workspace/.aws/credentials -in /workspace/.aws/credentials.enc -K $mykey -iv $iv
 git clone https://github.com/AlexandreFenyo/ovh-container-gpt-oss
@@ -16,6 +12,7 @@ cp ovh-container-gpt-oss/docker/files/ft.py .
 cp ovh-container-gpt-oss/docker/files/merge.py .
 cp ovh-container-gpt-oss/docker/files/query.py .
 aws s3 cp s3://cnam-models/gpt-oss-20b gpt-oss-20b --recursive
+aws s3 cp $cfg params.cfg
 
 echo RUNNING ft.py
 /workspace/venv/bin/python3 ft.py

@@ -27,11 +27,14 @@ echo
 
 for i in gpt-oss-20b-lora/checkpoint*
 do
-echo RUNNING query.py on checkpoint $i
-/workspace/venv/bin/python query.py --model-name $i --user-prompt "$QUESTION"
-echo DONE query.py on checkpoint $i
-echo
+    echo RUNNING query.py on checkpoint $i
+    /workspace/venv/bin/python query.py --model-name $i --user-prompt "$QUESTION"
+    echo DONE query.py on checkpoint $i
+    echo
 done
+
+aws s3 rm s3://cnam-models/gpt-oss-20b-lora --recursive
+aws s3 cp gpt-oss-20b-lora s3://cnam-models/gpt-oss-20b-lora --recursive
 
 echo RUNNING merge.py
 /workspace/venv/bin/python3 merge.py

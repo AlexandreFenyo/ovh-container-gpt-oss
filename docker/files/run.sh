@@ -45,5 +45,3 @@ cp gpt-oss-20b-tokenizer/* gpt-oss-20b-merged
 aws s3 rm s3://cnam-models/gpt-oss-20b-merged-mxfp4 --recursive
 aws s3 cp gpt-oss-20b-merged-mxfp4 s3://cnam-models/gpt-oss-20b-merged-mxfp4 --recursive
 
-aws s3 rm s3://cnam-models/gpt-oss-20b-lora --recursive
-aws s3 cp gpt-oss-20b-merged-mxfp4 s3://cnam-models/gpt-oss-20b-lora --recursive

@@ -9,6 +9,7 @@
 echo CREATING JOB OUTPUT DIRECTORY
 mkdir job_output
 cp run.sh job_output
+touch job_output/THISISAFILE.txt
 echo DONE JOB OUTPUT DIRECTORY
 
 echo PREPARING FILESYSTEM

@@ -3,7 +3,7 @@
 # variables d'env attendues :
 # mykey : clé de chiffrement AES-256 des fichiers .enc
 # iv : IV utilisé avec le chiffrement AES-256
-# wandbkey : clé d   'API wandb
+# wandbkey : clé d'API wandb
 # hfkey : clé d'API Hugging Face
 
 echo CREATING JOB OUTPUT DIRECTORY
@@ -58,6 +58,6 @@ aws s3 cp gpt-oss-20b-merged-mxfp4 s3://cnam-models/gpt-oss-20b-merged-mxfp4 --r
 echo DONE MXFP4
 
 echo SENDING OUTPUT
-aws s3 rm s3://cnam-models/job_ouput --recursive
-aws s3 cp job_output s3://cnam-models/job_ouput --recursive
+aws s3 rm s3://cnam-models/job_output --recursive
+aws s3 cp job_output s3://cnam-models/job_output --recursive
 echo DONE OUTPUT

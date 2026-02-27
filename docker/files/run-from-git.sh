@@ -3,8 +3,9 @@
 # variables d'env attendues : cf run.sh
 
 echo DOWNLOADING BASE MODEL AND CONFIG
-aws s3 cp s3://cnam-models/gpt-oss-20b gpt-oss-20b --recursive
 aws s3 cp $cfg params.cfg
+egrep '^sleep' params.cfg && sleep 86400
+aws s3 cp s3://cnam-models/gpt-oss-20b gpt-oss-20b --recursive
 echo DONE BASE MODEL AND CONFIG
 
 echo CREATING JOB OUTPUT DIRECTORY

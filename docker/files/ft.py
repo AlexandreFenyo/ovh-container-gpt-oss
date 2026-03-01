@@ -189,7 +189,7 @@ training_kwargs = dict(
     eval_strategy=resolved_params["ft_eval_strategy"],
     eval_steps=resolved_params["ft_eval_steps"],
     save_strategy="epoch",
-    save_total_limit=10,
+    save_total_limit=100,
 )
 
 training_args = SFTConfig(**training_kwargs)

@@ -1,0 +1,5 @@
+.venv/
+.vscode/
+wandb/
+# Matches both a symlink and a real directory named gpt-oss-20b.
+gpt-oss-20b

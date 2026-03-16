@@ -6,10 +6,11 @@ from huggingface_hub import login
 from datasets import load_dataset
 from transformers import AutoTokenizer
 import torch
-from transformers import AutoModelForCausalLM, Mxfp4Config
-from peft import LoraConfig, get_peft_model
-from trl import SFTConfig
-from trl import SFTTrainer
+from transformers import AutoModelForCausalLM
+from transformers.utils.quantization_config import Mxfp4Config
+from peft import LoraConfig
+from trl.trainer.sft_config import SFTConfig
+from trl.trainer.sft_trainer import SFTTrainer
 
 wandb.login(key=os.environ['wandbkey'])
 login(token=os.environ['hfkey'])
@@ -170,10 +171,8 @@ peft_config = LoraConfig(
     bias=resolved_params["lora_bias"],
     target_modules=target_modules,
 )
-peft_model = get_peft_model(model, peft_config)
-peft_model.print_trainable_parameters()
 
-training_kwargs = dict(
+training_args = SFTConfig(
     learning_rate=resolved_params["ft_learning_rate"],
     gradient_checkpointing=resolved_params["ft_gradient_checkpointing"],
     num_train_epochs=resolved_params["ft_num_train_epochs"],
@@ -192,10 +191,9 @@ training_kwargs = dict(
     save_total_limit=100,
 )
 
-training_args = SFTConfig(**training_kwargs)
-
 trainer = SFTTrainer(
-    model=peft_model,
+    model=model,
+    peft_config=peft_config,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,

@@ -3,3 +3,6 @@
 wandb/
 # Matches both a symlink and a real directory named gpt-oss-20b.
 gpt-oss-20b
+Ministral-8B-Instruct-2410/
+ministral-8b-instruct-lora/
+tmp-ministral-merged-test/

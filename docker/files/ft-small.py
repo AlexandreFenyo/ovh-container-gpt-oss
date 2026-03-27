@@ -4,6 +4,7 @@ import shlex
 import wandb
 from huggingface_hub import login
 from datasets import load_dataset
+import transformers
 from transformers import AutoTokenizer
 import torch
 from transformers import AutoModelForCausalLM
@@ -57,15 +58,16 @@ def _get_param(params, key, alias=None, default=None, required=True):
 
 
 def _load_tokenizer(tokenizer_name):
+    kwargs = {"use_fast": True}
+    if int(transformers.__version__.split(".", 1)[0]) < 5:
+        kwargs["fix_mistral_regex"] = True
     try:
-        return AutoTokenizer.from_pretrained(
-            tokenizer_name,
-            fix_mistral_regex=True,
-        )
+        return AutoTokenizer.from_pretrained(tokenizer_name, **kwargs)
     except TypeError as exc:
         if "fix_mistral_regex" not in str(exc):
             raise
-        return AutoTokenizer.from_pretrained(tokenizer_name)
+        kwargs.pop("fix_mistral_regex", None)
+        return AutoTokenizer.from_pretrained(tokenizer_name, **kwargs)
 
 
 def _fold_system_into_user(example):

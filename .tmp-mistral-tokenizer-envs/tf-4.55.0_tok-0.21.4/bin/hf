@@ -1,0 +1,6 @@
+#!/home/fenyo/tmp/ovh-container-gpt-oss/.tmp-mistral-tokenizer-envs/tf-4.55.0_tok-0.21.4/bin/python3
+import sys
+from huggingface_hub.cli.hf import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

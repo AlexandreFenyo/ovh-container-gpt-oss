@@ -5,6 +5,7 @@ import shutil
 import torch
 from huggingface_hub import hf_hub_download, save_torch_model
 from peft import PeftModel
+import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
@@ -22,16 +23,16 @@ def maybe_copy_file_from_hub(repo_id: str, filename: str, out_dir: str) -> None:
 
 
 def load_tokenizer_from_pretrained(repo_id: str) -> AutoTokenizer:
+    kwargs = {"use_fast": True}
+    if int(transformers.__version__.split(".", 1)[0]) < 5:
+        kwargs["fix_mistral_regex"] = True
     try:
-        return AutoTokenizer.from_pretrained(
-            repo_id,
-            use_fast=True,
-            fix_mistral_regex=True,
-        )
+        return AutoTokenizer.from_pretrained(repo_id, **kwargs)
     except TypeError as exc:
         if "fix_mistral_regex" not in str(exc):
             raise
-        return AutoTokenizer.from_pretrained(repo_id, use_fast=True)
+        kwargs.pop("fix_mistral_regex", None)
+        return AutoTokenizer.from_pretrained(repo_id, **kwargs)
 
 
 def load_tokenizer() -> AutoTokenizer:

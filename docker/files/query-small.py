@@ -3,6 +3,7 @@ import os
 
 import torch
 from peft import AutoPeftModelForCausalLM
+import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
@@ -19,16 +20,16 @@ DEFAULT_USER_PROMPT = (
 
 
 def load_tokenizer(tokenizer_name):
+    kwargs = {"use_fast": True}
+    if int(transformers.__version__.split(".", 1)[0]) < 5:
+        kwargs["fix_mistral_regex"] = True
     try:
-        return AutoTokenizer.from_pretrained(
-            tokenizer_name,
-            use_fast=True,
-            fix_mistral_regex=True,
-        )
+        return AutoTokenizer.from_pretrained(tokenizer_name, **kwargs)
     except TypeError as exc:
         if "fix_mistral_regex" not in str(exc):
             raise
-        return AutoTokenizer.from_pretrained(tokenizer_name, use_fast=True)
+        kwargs.pop("fix_mistral_regex", None)
+        return AutoTokenizer.from_pretrained(tokenizer_name, **kwargs)
 
 
 def load_model(model_name, model_kwargs):

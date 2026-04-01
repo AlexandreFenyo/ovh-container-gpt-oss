@@ -79,6 +79,18 @@ def _describe_messages(messages, limit=800):
     return text
 
 
+def _strip_thinking(messages):
+    if not isinstance(messages, list):
+        return messages
+    cleaned = []
+    for message in messages:
+        if isinstance(message, dict):
+            cleaned.append({k: v for k, v in message.items() if k != "thinking"})
+        else:
+            cleaned.append(message)
+    return cleaned
+
+
 def _trace_chat_dataset(dataset, tokenizer, dataset_name, sample_limit=3):
     print(f"Tracing dataset {dataset_name}: {len(dataset)} rows")
     for index in range(min(sample_limit, len(dataset))):
@@ -95,6 +107,18 @@ def _trace_chat_dataset(dataset, tokenizer, dataset_name, sample_limit=3):
             print(f"{dataset_name}[{index}] failed while applying chat template")
             print(f"{dataset_name}[{index}] keys={list(row.keys())}")
             print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+            cleaned_messages = _strip_thinking(messages)
+            if cleaned_messages != messages:
+                print(f"{dataset_name}[{index}] retrying after removing thinking fields")
+                print(f"{dataset_name}[{index}] cleaned_messages={_describe_messages(cleaned_messages)}")
+                try:
+                    tokenizer.apply_chat_template(cleaned_messages, tokenize=True, return_dict=True)
+                    print(f"{dataset_name}[{index}] cleaned messages passed chat template")
+                except Exception as cleaned_exc:
+                    print(f"{dataset_name}[{index}] cleaned messages still failed")
+                    raise RuntimeError(
+                        f"Failed to tokenize {dataset_name} row {index} even after removing thinking"
+                    ) from cleaned_exc
             raise RuntimeError(f"Failed to tokenize {dataset_name} row {index}") from exc
 
 

@@ -16,10 +16,11 @@ wandb.login(key=os.environ["wandbkey"])
 login(token=os.environ["hfkey"])
 
 quantization_config = Mxfp4Config(dequantize=True)
+compute_dtype = torch.float16
 
 model_kwargs = dict(
     attn_implementation="eager",
-    torch_dtype=torch.float16,
+    torch_dtype=compute_dtype,
     quantization_config=quantization_config,
     use_cache=False,
     # device_map="auto",
@@ -118,6 +119,16 @@ def _strip_thinking(messages, drop_thinking_always=False, drop_thinking_none=Fal
 
 def _prepare_chat_messages(messages, drop_thinking_always=False, drop_thinking_none=False):
     return _strip_thinking(messages, drop_thinking_always, drop_thinking_none)
+
+
+def _normalize_module_dtype(module, dtype):
+    for param in module.parameters():
+        if param.is_floating_point():
+            param.data = param.data.to(dtype)
+    for buffer in module.buffers():
+        if buffer.is_floating_point():
+            buffer.data = buffer.data.to(dtype)
+    return module
 
 
 def _render_chat_text(tokenizer, messages, drop_thinking_always=False, drop_thinking_none=False):
@@ -284,6 +295,10 @@ wandb.init(project=var_wandb_project, entity="alexandre-fenyo-fenyonet", name=va
 
 tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
+model = _normalize_module_dtype(model, compute_dtype)
+model.config.torch_dtype = compute_dtype
+if getattr(model, "generation_config", None) is not None:
+    model.generation_config.torch_dtype = compute_dtype
 
 train_dataset = load_dataset(var_dataset_name, split="train")
 train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_names if c != "messages"])

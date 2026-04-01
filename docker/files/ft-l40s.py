@@ -79,46 +79,63 @@ def _describe_messages(messages, limit=800):
     return text
 
 
-def _strip_thinking(messages):
+def _strip_thinking(messages, drop_thinking_always=False, drop_thinking_none=False):
     if not isinstance(messages, list):
         return messages
     cleaned = []
     for message in messages:
         if isinstance(message, dict):
-            cleaned.append({k: v for k, v in message.items() if k != "thinking"})
+            if drop_thinking_always:
+                cleaned.append({k: v for k, v in message.items() if k != "thinking"})
+            elif drop_thinking_none and message.get("thinking") is None:
+                cleaned.append({k: v for k, v in message.items() if k != "thinking"})
+            else:
+                cleaned.append(message)
         else:
             cleaned.append(message)
     return cleaned
 
 
-def _trace_chat_dataset(dataset, tokenizer, dataset_name, sample_limit=3):
+def _prepare_chat_messages(messages, drop_thinking_always=False, drop_thinking_none=False):
+    return _strip_thinking(messages, drop_thinking_always, drop_thinking_none)
+
+
+def _trace_chat_dataset(
+    dataset,
+    tokenizer,
+    dataset_name,
+    drop_thinking_always=False,
+    drop_thinking_none=False,
+    sample_limit=3,
+):
     print(f"Tracing dataset {dataset_name}: {len(dataset)} rows")
     for index in range(min(sample_limit, len(dataset))):
         row = dataset[index]
         messages = row.get("messages")
         print(f"{dataset_name}[{index}] keys={list(row.keys())}")
         print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+        prepared_messages = _prepare_chat_messages(
+            messages,
+            drop_thinking_always=drop_thinking_always,
+            drop_thinking_none=drop_thinking_none,
+        )
+        if prepared_messages != messages:
+            print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
     for index in range(len(dataset)):
         row = dataset[index]
         messages = row.get("messages")
+        prepared_messages = _prepare_chat_messages(
+            messages,
+            drop_thinking_always=drop_thinking_always,
+            drop_thinking_none=drop_thinking_none,
+        )
         try:
-            tokenizer.apply_chat_template(messages, tokenize=True, return_dict=True)
+            tokenizer.apply_chat_template(prepared_messages, tokenize=True, return_dict=True)
         except Exception as exc:
             print(f"{dataset_name}[{index}] failed while applying chat template")
             print(f"{dataset_name}[{index}] keys={list(row.keys())}")
             print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
-            cleaned_messages = _strip_thinking(messages)
-            if cleaned_messages != messages:
-                print(f"{dataset_name}[{index}] retrying after removing thinking fields")
-                print(f"{dataset_name}[{index}] cleaned_messages={_describe_messages(cleaned_messages)}")
-                try:
-                    tokenizer.apply_chat_template(cleaned_messages, tokenize=True, return_dict=True)
-                    print(f"{dataset_name}[{index}] cleaned messages passed chat template")
-                except Exception as cleaned_exc:
-                    print(f"{dataset_name}[{index}] cleaned messages still failed")
-                    raise RuntimeError(
-                        f"Failed to tokenize {dataset_name} row {index} even after removing thinking"
-                    ) from cleaned_exc
+            print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
             raise RuntimeError(f"Failed to tokenize {dataset_name} row {index}") from exc
 
 
@@ -152,6 +169,8 @@ known_keys = {
     "ft_report_to",
     "ft_eval_strategy",
     "ft_eval_steps",
+    "ft_drop_thinking_always",
+    "ft_drop_thinking_none",
 }
 unknown_keys = sorted(k for k in params.keys() if k not in known_keys)
 if unknown_keys:
@@ -186,6 +205,8 @@ resolved_params = {
     "ft_report_to": _get_param(params, "ft_report_to"),
     "ft_eval_strategy": _get_param(params, "ft_eval_strategy"),
     "ft_eval_steps": _get_param(params, "ft_eval_steps"),
+    "ft_drop_thinking_always": _get_param(params, "ft_drop_thinking_always", required=False, default=False),
+    "ft_drop_thinking_none": _get_param(params, "ft_drop_thinking_none", required=False, default=False),
 }
 
 print(f"Config values from {params_path}:")
@@ -211,8 +232,50 @@ train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_na
 eval_dataset = load_dataset(var_dataset_name, split="validation")
 eval_dataset = eval_dataset.remove_columns([c for c in eval_dataset.column_names if c != "messages"])
 
-_trace_chat_dataset(train_dataset, tokenizer, "train")
-_trace_chat_dataset(eval_dataset, tokenizer, "validation")
+drop_thinking_always = resolved_params["ft_drop_thinking_always"]
+drop_thinking_none = resolved_params["ft_drop_thinking_none"]
+
+if drop_thinking_always:
+    print("Thinking mode: drop thinking from all messages")
+elif drop_thinking_none:
+    print("Thinking mode: drop thinking only when it is None")
+else:
+    print("Thinking mode: keep thinking unchanged")
+
+train_dataset = train_dataset.map(
+    lambda row: {
+        "messages": _prepare_chat_messages(
+            row["messages"],
+            drop_thinking_always=drop_thinking_always,
+            drop_thinking_none=drop_thinking_none,
+        )
+    }
+)
+
+eval_dataset = eval_dataset.map(
+    lambda row: {
+        "messages": _prepare_chat_messages(
+            row["messages"],
+            drop_thinking_always=drop_thinking_always,
+            drop_thinking_none=drop_thinking_none,
+        )
+    }
+)
+
+_trace_chat_dataset(
+    train_dataset,
+    tokenizer,
+    "train",
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
+)
+_trace_chat_dataset(
+    eval_dataset,
+    tokenizer,
+    "validation",
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
+)
 
 peft_config = LoraConfig(
     r=resolved_params["lora_r"],

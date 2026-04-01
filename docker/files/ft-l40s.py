@@ -16,7 +16,7 @@ wandb.login(key=os.environ["wandbkey"])
 login(token=os.environ["hfkey"])
 
 quantization_config = Mxfp4Config(dequantize=True)
-compute_dtype = torch.float16
+compute_dtype = torch.bfloat16
 
 model_kwargs = dict(
     attn_implementation="eager",
@@ -375,8 +375,8 @@ training_args = SFTConfig(
     eval_steps=resolved_params["ft_eval_steps"],
     save_strategy="epoch",
     save_total_limit=100,
-    bf16=False,
-    fp16=True,
+    bf16=True,
+    fp16=False,
 )
 
 trainer = SFTTrainer(

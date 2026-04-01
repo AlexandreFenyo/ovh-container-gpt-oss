@@ -100,18 +100,43 @@ def _prepare_chat_messages(messages, drop_thinking_always=False, drop_thinking_n
     return _strip_thinking(messages, drop_thinking_always, drop_thinking_none)
 
 
-def _materialize_clean_dataset(dataset, drop_thinking_always=False, drop_thinking_none=False):
+def _render_chat_text(tokenizer, messages, drop_thinking_always=False, drop_thinking_none=False):
+    prepared_messages = _prepare_chat_messages(
+        messages,
+        drop_thinking_always=drop_thinking_always,
+        drop_thinking_none=drop_thinking_none,
+    )
+    return tokenizer.apply_chat_template(prepared_messages, tokenize=False, add_generation_prompt=False)
+
+
+def _materialize_text_dataset(
+    dataset,
+    tokenizer,
+    dataset_name,
+    drop_thinking_always=False,
+    drop_thinking_none=False,
+):
     rows = []
-    for row in dataset:
-        rows.append(
-            {
-                "messages": _prepare_chat_messages(
-                    row["messages"],
-                    drop_thinking_always=drop_thinking_always,
-                    drop_thinking_none=drop_thinking_none,
-                )
-            }
-        )
+    for index, row in enumerate(dataset):
+        messages = row["messages"]
+        try:
+            text = _render_chat_text(
+                tokenizer,
+                messages,
+                drop_thinking_always=drop_thinking_always,
+                drop_thinking_none=drop_thinking_none,
+            )
+        except Exception as exc:
+            prepared_messages = _prepare_chat_messages(
+                messages,
+                drop_thinking_always=drop_thinking_always,
+                drop_thinking_none=drop_thinking_none,
+            )
+            print(f"{dataset_name}[{index}] failed while rendering chat text")
+            print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+            print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
+            raise RuntimeError(f"Failed to render {dataset_name} row {index}") from exc
+        rows.append({"text": text})
     return Dataset.from_list(rows)
 
 
@@ -127,31 +152,17 @@ def _trace_chat_dataset(
     for index in range(min(sample_limit, len(dataset))):
         row = dataset[index]
         messages = row.get("messages")
+        prepared_messages = _prepare_chat_messages(
+            messages,
+            drop_thinking_always=drop_thinking_always,
+            drop_thinking_none=drop_thinking_none,
+        )
+        text = tokenizer.apply_chat_template(prepared_messages, tokenize=False, add_generation_prompt=False)
         print(f"{dataset_name}[{index}] keys={list(row.keys())}")
         print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
-        prepared_messages = _prepare_chat_messages(
-            messages,
-            drop_thinking_always=drop_thinking_always,
-            drop_thinking_none=drop_thinking_none,
-        )
         if prepared_messages != messages:
             print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
-    for index in range(len(dataset)):
-        row = dataset[index]
-        messages = row.get("messages")
-        prepared_messages = _prepare_chat_messages(
-            messages,
-            drop_thinking_always=drop_thinking_always,
-            drop_thinking_none=drop_thinking_none,
-        )
-        try:
-            tokenizer.apply_chat_template(prepared_messages, tokenize=True, return_dict=True)
-        except Exception as exc:
-            print(f"{dataset_name}[{index}] failed while applying chat template")
-            print(f"{dataset_name}[{index}] keys={list(row.keys())}")
-            print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
-            print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
-            raise RuntimeError(f"Failed to tokenize {dataset_name} row {index}") from exc
+        print(f"{dataset_name}[{index}] text={_describe_messages(text)}")
 
 
 params_path = os.environ.get("PARAMS_CFG", "params.cfg")
@@ -257,16 +268,20 @@ elif drop_thinking_none:
 else:
     print("Thinking mode: keep thinking unchanged")
 
-train_dataset = _materialize_clean_dataset(
+train_dataset = _materialize_text_dataset(
     train_dataset,
     drop_thinking_always=drop_thinking_always,
     drop_thinking_none=drop_thinking_none,
+    tokenizer=tokenizer,
+    dataset_name="train",
 )
 
-eval_dataset = _materialize_clean_dataset(
+eval_dataset = _materialize_text_dataset(
     eval_dataset,
     drop_thinking_always=drop_thinking_always,
     drop_thinking_none=drop_thinking_none,
+    tokenizer=tokenizer,
+    dataset_name="validation",
 )
 
 _trace_chat_dataset(
@@ -320,6 +335,7 @@ trainer = SFTTrainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     processing_class=tokenizer,
+    dataset_text_field="text",
 )
 
 trainer.train()

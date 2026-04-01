@@ -79,6 +79,26 @@ def _describe_messages(messages, limit=800):
     return text
 
 
+def _describe_message_structure(messages):
+    if not isinstance(messages, list):
+        return f"type={type(messages).__name__} value={_describe_messages(messages)}"
+    parts = []
+    for index, message in enumerate(messages):
+        if isinstance(message, dict):
+            content = message.get("content")
+            parts.append(
+                f"[{index}] keys={sorted(message.keys())} "
+                f"role={type(message.get('role')).__name__} "
+                f"content_type={type(content).__name__} "
+                f"content_none={content is None} "
+                f"thinking_type={type(message.get('thinking')).__name__} "
+                f"thinking_none={message.get('thinking') is None}"
+            )
+        else:
+            parts.append(f"[{index}] type={type(message).__name__} value={_describe_messages(message)}")
+    return " | ".join(parts)
+
+
 def _strip_thinking(messages, drop_thinking_always=False, drop_thinking_none=False):
     if not isinstance(messages, list):
         return messages
@@ -134,7 +154,9 @@ def _materialize_text_dataset(
             )
             print(f"{dataset_name}[{index}] failed while rendering chat text")
             print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+            print(f"{dataset_name}[{index}] structure={_describe_message_structure(messages)}")
             print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
+            print(f"{dataset_name}[{index}] prepared_structure={_describe_message_structure(prepared_messages)}")
             raise RuntimeError(f"Failed to render {dataset_name} row {index}") from exc
         rows.append({"text": text})
     return Dataset.from_list(rows)
@@ -157,11 +179,13 @@ def _trace_chat_dataset(
             drop_thinking_always=drop_thinking_always,
             drop_thinking_none=drop_thinking_none,
         )
-        text = tokenizer.apply_chat_template(prepared_messages, tokenize=False, add_generation_prompt=False)
         print(f"{dataset_name}[{index}] keys={list(row.keys())}")
         print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+        print(f"{dataset_name}[{index}] structure={_describe_message_structure(messages)}")
         if prepared_messages != messages:
             print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
+            print(f"{dataset_name}[{index}] prepared_structure={_describe_message_structure(prepared_messages)}")
+        text = tokenizer.apply_chat_template(prepared_messages, tokenize=False, add_generation_prompt=False)
         print(f"{dataset_name}[{index}] text={_describe_messages(text)}")
 
 

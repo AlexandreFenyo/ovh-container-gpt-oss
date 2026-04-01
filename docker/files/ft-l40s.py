@@ -301,6 +301,21 @@ elif drop_thinking_none:
 else:
     print("Thinking mode: keep thinking unchanged")
 
+_trace_raw_chat_dataset(
+    train_dataset,
+    tokenizer,
+    "train raw",
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
+)
+_trace_raw_chat_dataset(
+    eval_dataset,
+    tokenizer,
+    "validation raw",
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
+)
+
 train_dataset = _materialize_text_dataset(
     train_dataset,
     drop_thinking_always=drop_thinking_always,
@@ -315,21 +330,6 @@ eval_dataset = _materialize_text_dataset(
     drop_thinking_none=drop_thinking_none,
     tokenizer=tokenizer,
     dataset_name="validation",
-)
-
-_trace_raw_chat_dataset(
-    train_dataset,
-    tokenizer,
-    "train",
-    drop_thinking_always=drop_thinking_always,
-    drop_thinking_none=drop_thinking_none,
-)
-_trace_raw_chat_dataset(
-    eval_dataset,
-    tokenizer,
-    "validation",
-    drop_thinking_always=drop_thinking_always,
-    drop_thinking_none=drop_thinking_none,
 )
 
 _trace_text_dataset(train_dataset, "train")

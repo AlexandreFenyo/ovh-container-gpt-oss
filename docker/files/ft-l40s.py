@@ -296,8 +296,16 @@ wandb.init(project=var_wandb_project, entity="alexandre-fenyo-fenyonet", name=va
 tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
 model = _normalize_module_dtype(model, compute_dtype)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.bos_token_id = tokenizer.bos_token_id
+model.config.eos_token_id = tokenizer.eos_token_id
 model.config.torch_dtype = compute_dtype
 if getattr(model, "generation_config", None) is not None:
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
+    model.generation_config.bos_token_id = tokenizer.bos_token_id
+    model.generation_config.eos_token_id = tokenizer.eos_token_id
     model.generation_config.torch_dtype = compute_dtype
 
 train_dataset = load_dataset(var_dataset_name, split="train")
@@ -375,6 +383,7 @@ training_args = SFTConfig(
     eval_steps=resolved_params["ft_eval_steps"],
     save_strategy="epoch",
     save_total_limit=100,
+    ddp_find_unused_parameters=False,
     bf16=True,
     fp16=False,
 )

@@ -3,7 +3,7 @@ import shlex
 
 import torch
 import wandb
-from datasets import load_dataset
+from datasets import Dataset, load_dataset
 from huggingface_hub import login
 from peft import LoraConfig
 from transformers import AutoModelForCausalLM
@@ -98,6 +98,21 @@ def _strip_thinking(messages, drop_thinking_always=False, drop_thinking_none=Fal
 
 def _prepare_chat_messages(messages, drop_thinking_always=False, drop_thinking_none=False):
     return _strip_thinking(messages, drop_thinking_always, drop_thinking_none)
+
+
+def _materialize_clean_dataset(dataset, drop_thinking_always=False, drop_thinking_none=False):
+    rows = []
+    for row in dataset:
+        rows.append(
+            {
+                "messages": _prepare_chat_messages(
+                    row["messages"],
+                    drop_thinking_always=drop_thinking_always,
+                    drop_thinking_none=drop_thinking_none,
+                )
+            }
+        )
+    return Dataset.from_list(rows)
 
 
 def _trace_chat_dataset(
@@ -242,24 +257,16 @@ elif drop_thinking_none:
 else:
     print("Thinking mode: keep thinking unchanged")
 
-train_dataset = train_dataset.map(
-    lambda row: {
-        "messages": _prepare_chat_messages(
-            row["messages"],
-            drop_thinking_always=drop_thinking_always,
-            drop_thinking_none=drop_thinking_none,
-        )
-    }
+train_dataset = _materialize_clean_dataset(
+    train_dataset,
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
 )
 
-eval_dataset = eval_dataset.map(
-    lambda row: {
-        "messages": _prepare_chat_messages(
-            row["messages"],
-            drop_thinking_always=drop_thinking_always,
-            drop_thinking_none=drop_thinking_none,
-        )
-    }
+eval_dataset = _materialize_clean_dataset(
+    eval_dataset,
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
 )
 
 _trace_chat_dataset(

@@ -72,6 +72,32 @@ def _get_param(params, key, alias=None, default=None, required=True):
     return default
 
 
+def _describe_messages(messages, limit=800):
+    text = repr(messages)
+    if len(text) > limit:
+        return text[:limit] + "...<truncated>"
+    return text
+
+
+def _trace_chat_dataset(dataset, tokenizer, dataset_name, sample_limit=3):
+    print(f"Tracing dataset {dataset_name}: {len(dataset)} rows")
+    for index in range(min(sample_limit, len(dataset))):
+        row = dataset[index]
+        messages = row.get("messages")
+        print(f"{dataset_name}[{index}] keys={list(row.keys())}")
+        print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+    for index in range(len(dataset)):
+        row = dataset[index]
+        messages = row.get("messages")
+        try:
+            tokenizer.apply_chat_template(messages, tokenize=True, return_dict=True)
+        except Exception as exc:
+            print(f"{dataset_name}[{index}] failed while applying chat template")
+            print(f"{dataset_name}[{index}] keys={list(row.keys())}")
+            print(f"{dataset_name}[{index}] messages={_describe_messages(messages)}")
+            raise RuntimeError(f"Failed to tokenize {dataset_name} row {index}") from exc
+
+
 params_path = os.environ.get("PARAMS_CFG", "params.cfg")
 if not os.path.isabs(params_path):
     params_path = os.path.join(os.path.dirname(__file__), params_path)
@@ -160,6 +186,9 @@ train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_na
 
 eval_dataset = load_dataset(var_dataset_name, split="validation")
 eval_dataset = eval_dataset.remove_columns([c for c in eval_dataset.column_names if c != "messages"])
+
+_trace_chat_dataset(train_dataset, tokenizer, "train")
+_trace_chat_dataset(eval_dataset, tokenizer, "validation")
 
 peft_config = LoraConfig(
     r=resolved_params["lora_r"],

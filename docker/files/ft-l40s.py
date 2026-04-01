@@ -162,7 +162,7 @@ def _materialize_text_dataset(
     return Dataset.from_list(rows)
 
 
-def _trace_chat_dataset(
+def _trace_raw_chat_dataset(
     dataset,
     tokenizer,
     dataset_name,
@@ -186,6 +186,15 @@ def _trace_chat_dataset(
             print(f"{dataset_name}[{index}] prepared_messages={_describe_messages(prepared_messages)}")
             print(f"{dataset_name}[{index}] prepared_structure={_describe_message_structure(prepared_messages)}")
         text = tokenizer.apply_chat_template(prepared_messages, tokenize=False, add_generation_prompt=False)
+        print(f"{dataset_name}[{index}] text={_describe_messages(text)}")
+
+
+def _trace_text_dataset(dataset, dataset_name, sample_limit=3):
+    print(f"Tracing text dataset {dataset_name}: {len(dataset)} rows")
+    for index in range(min(sample_limit, len(dataset))):
+        row = dataset[index]
+        text = row.get("text")
+        print(f"{dataset_name}[{index}] keys={list(row.keys())}")
         print(f"{dataset_name}[{index}] text={_describe_messages(text)}")
 
 
@@ -308,20 +317,23 @@ eval_dataset = _materialize_text_dataset(
     dataset_name="validation",
 )
 
-_trace_chat_dataset(
+_trace_raw_chat_dataset(
     train_dataset,
     tokenizer,
     "train",
     drop_thinking_always=drop_thinking_always,
     drop_thinking_none=drop_thinking_none,
 )
-_trace_chat_dataset(
+_trace_raw_chat_dataset(
     eval_dataset,
     tokenizer,
     "validation",
     drop_thinking_always=drop_thinking_always,
     drop_thinking_none=drop_thinking_none,
 )
+
+_trace_text_dataset(train_dataset, "train")
+_trace_text_dataset(eval_dataset, "validation")
 
 peft_config = LoraConfig(
     r=resolved_params["lora_r"],

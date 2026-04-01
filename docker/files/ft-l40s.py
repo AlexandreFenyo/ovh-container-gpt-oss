@@ -371,7 +371,6 @@ trainer = SFTTrainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     processing_class=tokenizer,
-    dataset_text_field="text",
 )
 
 trainer.train()

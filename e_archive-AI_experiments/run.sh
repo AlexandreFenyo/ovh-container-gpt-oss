@@ -1,7 +1,6 @@
 #!/usr/bin/zsh
 
 cd e:/AI_experiments
-source env.sh
 ovhai job list -a --output json | jq -r '.[] | select(.spec.name=="'$RUN'") | .id' | xargs ovhai job delete
 while [ ! -z $(ovhai job list -a --output json | jq -r '.[] | select(.spec.name=="'$RUN'") | .id') ]
 do

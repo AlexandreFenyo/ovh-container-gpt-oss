@@ -45,7 +45,14 @@ def main():
     user_prompt = args.user_prompt if args.user_prompt is not None else default_user_prompt
 
     messages = [
-        {"role": "system", "content": "You are a helpful chatbot assistant for the Mon Espace Santé website."},
+        {
+            "role": "system",
+            "content": (
+                "You are a helpful chatbot assistant for the Mon Espace Santé website. "
+                "You answer only based on the information present in the FAQ. "
+                "If the information is not available, you must respond with the predefined refusal message and nothing else."
+            ),
+        },
         {"role": "user", "content": user_prompt},
     ]
 
@@ -62,5 +69,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

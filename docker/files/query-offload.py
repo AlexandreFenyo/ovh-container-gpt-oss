@@ -239,6 +239,9 @@ def main():
             thinking_path = answers_dir / (
                 f"{model_name}-thinking-{origin}-{row_id}-{row_type}-{variant_q}-{variant_a}.txt"
             )
+            question_path = answers_dir / (
+                f"{model_name}-question-{origin}-{row_id}-{row_type}-{variant_q}-{variant_a}.txt"
+            )
 
             if model_name == "base":
                 thinking, assistant = _generate_response(
@@ -260,6 +263,7 @@ def main():
 
             _write_text_file(assistant_path, assistant)
             _write_text_file(thinking_path, thinking)
+            _write_text_file(question_path, user_prompt)
 
             if index % 25 == 0:
                 print(f"  {index + 1}/{len(dataset)}")

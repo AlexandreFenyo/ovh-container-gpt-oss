@@ -241,14 +241,13 @@ def main():
             )
 
             if model_name == "base":
-                with model.disable_adapter():
-                    thinking, assistant = _generate_response(
-                        model,
-                        tokenizer,
-                        system_prompt,
-                        user_prompt,
-                        args.max_new_tokens,
-                    )
+                thinking, assistant = _generate_response(
+                    model,
+                    tokenizer,
+                    system_prompt,
+                    user_prompt,
+                    args.max_new_tokens,
+                )
             else:
                 model.set_adapter(model_name)
                 thinking, assistant = _generate_response(

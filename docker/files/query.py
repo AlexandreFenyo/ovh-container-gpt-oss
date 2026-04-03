@@ -1,9 +1,28 @@
 
 import argparse
+import re
 from huggingface_hub import login
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from transformers import Mxfp4Config
+
+
+CHANNEL_PATTERN = re.compile(r"<\|channel\|>(analysis|final)")
+
+
+def _extract_channel(text, channel_name):
+    marker = f"<|channel|>{channel_name}"
+    start = text.find(marker)
+    if start == -1:
+        return ""
+    start += len(marker)
+    next_match = CHANNEL_PATTERN.search(text, start)
+    end = next_match.start() if next_match else len(text)
+    return text[start:end].strip()
+
+
+def _strip_special_tokens(text):
+    return text.replace("<|start|>", "").replace("<|message|>", "").replace("<|end|>", "").strip()
 
 def main():
     # Définir l'argument en ligne de commande
@@ -65,8 +84,19 @@ def main():
 
     output_ids = model.generate(**inputs, max_new_tokens=2048)
     generated_ids = output_ids[0][inputs["input_ids"].shape[-1]:]
-    response = tokenizer.decode(generated_ids, skip_special_tokens=True)
-    print(response)
+    raw_response = tokenizer.decode(generated_ids, skip_special_tokens=False)
+    analysis = _extract_channel(raw_response, "analysis")
+    final = _extract_channel(raw_response, "final")
+
+    if analysis:
+        print("THINKING:")
+        print(_strip_special_tokens(analysis))
+        print()
+    print("FINAL:")
+    if final:
+        print(_strip_special_tokens(final))
+    else:
+        print(_strip_special_tokens(raw_response))
 
 if __name__ == "__main__":
     main()

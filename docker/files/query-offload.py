@@ -184,6 +184,12 @@ def main():
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["bfloat16", "float16", "float32"])
     parser.add_argument("--device-map", type=str, default="auto")
     parser.add_argument("--max-new-tokens", type=int, default=2048)
+    parser.add_argument(
+        "--start-checkpoint",
+        type=str,
+        default=None,
+        help="Nom du checkpoint de départ, par exemple checkpoint-63. Si absent, le script commence par le modèle de base.",
+    )
     args = parser.parse_args()
 
     params_path = args.params_path
@@ -215,6 +221,18 @@ def main():
     model_specs = [("base", None)]
     model_specs.extend((Path(path).name, path) for path in checkpoint_dirs)
     model_specs.append(("final", adapter_dir))
+
+    if args.start_checkpoint:
+        start_name = Path(args.start_checkpoint).name
+        start_index = None
+        for index, (model_name, _) in enumerate(model_specs):
+            if model_name == start_name:
+                start_index = index
+                break
+        if start_index is None:
+            print(f"ERROR: checkpoint introuvable: {start_name}")
+            raise SystemExit(1)
+        model_specs = model_specs[start_index:]
 
     for model_name, adapter_path in model_specs:
         print(f"Running model: {model_name}")

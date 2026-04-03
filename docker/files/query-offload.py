@@ -3,6 +3,7 @@ import glob
 import os
 import re
 import sys
+import gc
 from pathlib import Path
 
 import torch
@@ -113,6 +114,15 @@ def _load_base_model(base_model_name, device_map, dtype):
     )
 
 
+def _load_model(base_model_name, adapter_path, adapter_name, device_map, dtype):
+    base_model = _load_base_model(base_model_name, device_map, dtype)
+    if adapter_path is None:
+        return base_model
+    model = PeftModel.from_pretrained(base_model, adapter_path, adapter_name=adapter_name)
+    model.set_adapter(adapter_name)
+    return model
+
+
 def _build_messages(system_prompt, user_prompt):
     return [
         {"role": "system", "content": system_prompt},
@@ -150,6 +160,13 @@ def _write_text_file(path, text):
         print(f"ERROR: fichier deja existant: {path}")
         raise SystemExit(1)
     path.write_text(text, encoding="utf-8")
+
+
+def _release_model(model):
+    del model
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def main():
@@ -191,25 +208,22 @@ def main():
 
     tokenizer = _load_tokenizer(tokenizer_name)
     dtype = getattr(torch, args.dtype)
-    base_model = _load_base_model(base_model_name, args.device_map, dtype)
-    model = PeftModel.from_pretrained(base_model, adapter_dir, adapter_name="final")
-    model.set_adapter("final")
-
-    for checkpoint_dir in checkpoint_dirs:
-        checkpoint_name = Path(checkpoint_dir).name
-        print(f"Loading checkpoint adapter: {checkpoint_name}")
-        model.load_adapter(checkpoint_dir, adapter_name=checkpoint_name)
-
-    model.eval()
-
     dataset = load_dataset(dataset_name, split=args.dataset_split)
     print(f"Dataset: {dataset_name} / {args.dataset_split} ({len(dataset)} rows)")
     print(f"Answers: {answers_dir}")
 
-    model_order = ["base"] + [Path(path).name for path in checkpoint_dirs] + ["final"]
+    model_specs = [("base", None)]
+    model_specs.extend((Path(path).name, path) for path in checkpoint_dirs)
+    model_specs.append(("final", adapter_dir))
 
-    for model_name in model_order:
+    for model_name, adapter_path in model_specs:
         print(f"Running model: {model_name}")
+        if adapter_path is None:
+            model = _load_model(base_model_name, None, model_name, args.device_map, dtype)
+        else:
+            print(f"Loading checkpoint adapter: {adapter_path}")
+            model = _load_model(base_model_name, adapter_path, model_name, args.device_map, dtype)
+        model.eval()
         for index, row in enumerate(dataset):
             messages = row["messages"]
             user_prompt = _extract_user_prompt(messages)
@@ -250,6 +264,8 @@ def main():
 
             if index % 25 == 0:
                 print(f"  {index + 1}/{len(dataset)}")
+
+        _release_model(model)
 
 
 if __name__ == "__main__":

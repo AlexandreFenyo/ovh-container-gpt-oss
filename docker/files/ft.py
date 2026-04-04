@@ -70,6 +70,35 @@ def _get_param(params, key, alias=None, default=None, required=True):
     return default
 
 
+def _strip_thinking(messages, drop_thinking_always=False, drop_thinking_none=False):
+    if not isinstance(messages, list):
+        return messages
+    cleaned = []
+    for message in messages:
+        if not isinstance(message, dict):
+            cleaned.append(message)
+            continue
+        if drop_thinking_always:
+            cleaned.append({k: v for k, v in message.items() if k != "thinking"})
+        elif drop_thinking_none and message.get("thinking") is None:
+            cleaned.append({k: v for k, v in message.items() if k != "thinking"})
+        else:
+            cleaned.append(message)
+    return cleaned
+
+
+def _strip_thinking_dataset(dataset, drop_thinking_always=False, drop_thinking_none=False):
+    return dataset.map(
+        lambda example: {
+            "messages": _strip_thinking(
+                example["messages"],
+                drop_thinking_always=drop_thinking_always,
+                drop_thinking_none=drop_thinking_none,
+            )
+        }
+    )
+
+
 params_path = os.environ.get("PARAMS_CFG", "params.cfg")
 if not os.path.isabs(params_path):
     params_path = os.path.join(os.path.dirname(__file__), params_path)
@@ -100,6 +129,8 @@ known_keys = {
     "ft_report_to",
     "ft_eval_strategy",
     "ft_eval_steps",
+    "ft_drop_thinking_always",
+    "ft_drop_thinking_none",
 }
 unknown_keys = sorted(k for k in params.keys() if k not in known_keys)
 if unknown_keys:
@@ -134,6 +165,8 @@ resolved_params = {
     "ft_report_to": _get_param(params, "ft_report_to"),
     "ft_eval_strategy": _get_param(params, "ft_eval_strategy"),
     "ft_eval_steps": _get_param(params, "ft_eval_steps"),
+    "ft_drop_thinking_always": _get_param(params, "ft_drop_thinking_always", required=False, default=False),
+    "ft_drop_thinking_none": _get_param(params, "ft_drop_thinking_none", required=False, default=False),
 }
 
 print(f"Config values from {params_path}:")
@@ -163,6 +196,26 @@ train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_na
 
 eval_dataset = load_dataset(var_dataset_name, split="validation")
 eval_dataset = eval_dataset.remove_columns([c for c in eval_dataset.column_names if c != "messages"])
+
+drop_thinking_always = resolved_params["ft_drop_thinking_always"]
+drop_thinking_none = resolved_params["ft_drop_thinking_none"]
+if drop_thinking_always:
+    print("Thinking mode: drop thinking from all messages")
+elif drop_thinking_none:
+    print("Thinking mode: drop thinking only when it is None")
+else:
+    print("Thinking mode: keep thinking unchanged")
+
+train_dataset = _strip_thinking_dataset(
+    train_dataset,
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
+)
+eval_dataset = _strip_thinking_dataset(
+    eval_dataset,
+    drop_thinking_always=drop_thinking_always,
+    drop_thinking_none=drop_thinking_none,
+)
 
 peft_config = LoraConfig(
     r=resolved_params["lora_r"],
@@ -203,4 +256,3 @@ trainer = SFTTrainer(
 trainer.train()
 trainer.save_model(training_args.output_dir)
 # trainer.push_to_hub(dataset_name=var_dataset_name)
-

@@ -190,6 +190,12 @@ def main():
         default=None,
         help="Nom du checkpoint de départ, par exemple checkpoint-63. Si absent, le script commence par le modèle de base.",
     )
+    parser.add_argument(
+        "--end-checkpoint",
+        type=str,
+        default=None,
+        help="Nom du checkpoint de fin, par exemple checkpoint-63 ou final. Si absent, le script va jusqu'au modèle final.",
+    )
     args = parser.parse_args()
 
     params_path = args.params_path
@@ -233,6 +239,18 @@ def main():
             print(f"ERROR: checkpoint introuvable: {start_name}")
             raise SystemExit(1)
         model_specs = model_specs[start_index:]
+
+    if args.end_checkpoint:
+        end_name = Path(args.end_checkpoint).name
+        end_index = None
+        for index, (model_name, _) in enumerate(model_specs):
+            if model_name == end_name:
+                end_index = index
+                break
+        if end_index is None:
+            print(f"ERROR: checkpoint introuvable: {end_name}")
+            raise SystemExit(1)
+        model_specs = model_specs[: end_index + 1]
 
     for model_name, adapter_path in model_specs:
         print(f"Running model: {model_name}")

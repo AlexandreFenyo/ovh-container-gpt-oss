@@ -1,3 +1,5 @@
+# ft_drop_thinking_always=true
+# ft_drop_thinking_none=true
 wandb_notebook_name="gpt-oss-20b-FAQ-MES"
 tokenizer="gpt-oss-20b"
 system_prompt="You are a helpful chatbot assistant for the Mon Espace Santé website. You answer only based on the information present in the FAQ. If the information is not available, you must respond with the predefined refusal message and nothing else."

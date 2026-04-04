@@ -7,6 +7,9 @@ docker/files/aws/credentials.enc: docker/files/aws/credentials
 build: docker/files/aws/credentials.enc
 	cd docker ; docker build -t fenyoa/ft_gpt_oss_20b_ovh_faq -f Dockerfile .
 
+build-L40s: docker/files/aws/credentials.enc
+	cd docker ; docker build -t fenyoa/ft_gpt_oss_20b_ovh_faq_l40s -f Dockerfile.L40s .
+
 run:
 	docker run --gpus all --user=42420:42420 -e iv=$$iv -e mykey=$$mykey --rm -t -i fenyoa/ft_gpt_oss_20b_ovh_faq
 
@@ -20,6 +23,10 @@ run-on-ovh:
 push:
 	echo RUN '"docker login -u fenyoa"' and enter password
 	docker push fenyoa/ft_gpt_oss_20b_ovh_faq
+
+push-l40s:
+	echo RUN '"docker login -u fenyoa"' and enter password
+	docker push fenyoa/ft_gpt_oss_20b_ovh_faq_l40s
 
 pull:
 	rm -rf /mnt/e/gpt-oss-20b-merged-mxfp4

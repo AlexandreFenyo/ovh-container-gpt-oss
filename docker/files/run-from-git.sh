@@ -16,7 +16,7 @@ echo DONE JOB OUTPUT DIRECTORY
 
 echo RUNNING ft.py
 /workspace/venv/bin/python3 ft.py
-echo DONE merge.py
+echo DONE ft.py
 echo
 
 export QUESTION="Pouvez‑vous lister les options exclusives à la version mobile ?"
